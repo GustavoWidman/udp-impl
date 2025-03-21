@@ -8,11 +8,11 @@ mod utils;
 // Example usage
 pub fn main() -> Result<()> {
     // Create a UDP socket for IPv4
-    let src_addr = utils::macros::ipv4!("100.116.68.8:8080")?;
+    let src_addr = utils::macros::ipv4!("127.0.0.1:8080")?;
     let src_socket = proto::socket::UDPSocket::new(src_addr)?;
     println!("Created source UDP socket for IPv4. Bound to {}", src_addr);
 
-    let dst_addr = utils::macros::ipv4!("100.71.176.84:9090")?;
+    let dst_addr = utils::macros::ipv4!("127.0.0.1:9090")?;
     let dst_socket = proto::socket::UDPSocket::new(dst_addr)?;
     println!(
         "Created destination UDP socket for IPv4. Bound to {}",

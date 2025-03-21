@@ -4,7 +4,10 @@ use std::{
     net::{Ipv4Addr, SocketAddr, SocketAddrV4},
 };
 
-use libc::{AF_INET, IPPROTO_UDP, SOCK_RAW, bind, c_int, recvfrom, sendto, socket};
+use libc::{
+    AF_INET, IP_HDRINCL, IPPROTO_IP, IPPROTO_UDP, SOCK_RAW, bind, c_int, c_void, recvfrom, sendto,
+    socket, socklen_t,
+};
 
 use crate::common::traits::{FromBytes, ToBytes};
 
@@ -19,11 +22,15 @@ pub struct UDPSocket {
 impl UDPSocket {
     pub fn new(addr: SocketAddrV4) -> Result<Self> {
         let sock_addr = libc::sockaddr_in {
+            #[cfg(target_os = "linux")]
+            sin_family: libc::AF_INET as u16,
+            #[cfg(target_os = "macos")]
             sin_family: libc::AF_INET as u8,
             sin_port: addr.port().to_be(),
             sin_addr: libc::in_addr {
                 s_addr: u32::from_be_bytes(addr.ip().octets()).to_be(),
             },
+            #[cfg(target_os = "macos")]
             sin_len: mem::size_of::<libc::sockaddr_in>() as u8,
             sin_zero: [0; 8],
         };
@@ -35,17 +42,17 @@ impl UDPSocket {
                 return Err(Error::last_os_error());
             }
 
-            // let val: c_int = 1;
-            // let res = libc::setsockopt(
-            //     sock,
-            //     IPPROTO_IP,
-            //     IP_HDRINCL,
-            //     &val as *const c_int as *const c_void,
-            //     mem::size_of::<c_int>() as socklen_t,
-            // );
-            // if res < 0 {
-            //     return Err(Error::last_os_error());
-            // }
+            let val: c_int = 1;
+            let res = libc::setsockopt(
+                sock,
+                IPPROTO_IP,
+                IP_HDRINCL,
+                &val as *const c_int as *const c_void,
+                mem::size_of::<c_int>() as socklen_t,
+            );
+            if res < 0 {
+                return Err(Error::last_os_error());
+            }
 
             let res = bind(
                 sock,
@@ -62,12 +69,16 @@ impl UDPSocket {
 
     pub fn send_packet(&self, packet: &impl ToBytes, addr: &SocketAddrV4) -> Result<usize> {
         let sock_addr = libc::sockaddr_in {
+            #[cfg(target_os = "linux")]
+            sin_family: libc::AF_INET as u16,
+            #[cfg(target_os = "macos")]
             sin_family: libc::AF_INET as u8,
             sin_port: addr.port().to_be(),
             sin_addr: libc::in_addr {
                 s_addr: u32::from_be_bytes(addr.ip().octets()).to_be(),
             },
             sin_zero: [0; 8],
+            #[cfg(target_os = "macos")]
             sin_len: mem::size_of::<libc::sockaddr_in>() as u8,
         };
 
