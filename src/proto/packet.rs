@@ -46,11 +46,11 @@ impl UDPPacket {
 
         // combine pseudo header, UDP header, and payload
         let mut checksum_data = pseudo_header.to_bytes()?;
-        println!(
-            "Pseudo header bytes (len {}): {:?}",
+        log::debug!(
+            "Pseudo header bytes (len {}):\n\n{:?}\n",
             checksum_data.len(),
             checksum_data
-        ); // TODO: remove
+        );
         checksum_data.extend_from_slice(&self.to_bytes()?);
         checksum_data.extend_from_slice(&self.payload);
 
@@ -86,7 +86,7 @@ impl ToBytes for UDPPacket {
     fn to_bytes(&self) -> Result<Vec<u8>> {
         let mut bytes = self.header.to_bytes()?;
 
-        println!("Header bytes (len {}): {:?}", bytes.len(), bytes); // TODO: remove
+        log::debug!("Header bytes (len {}):\n\n{:?}\n", bytes.len(), bytes); // TODO: remove
 
         bytes.extend_from_slice(&self.payload);
 
@@ -106,7 +106,11 @@ impl FromBytes for UDPPacket {
         let header = UDPHeader::from_bytes(&bytes[0..8])?;
 
         if header.length as usize != bytes.len() {
-            println!("Got {} bytes, expected {}", bytes.len(), header.length); // TODO: remove
+            log::warn!(
+                "Got {} bytes but expected {} (as per header). Ignoring...",
+                bytes.len(),
+                header.length
+            ); // TODO: remove
 
             return Err(Error::new(ErrorKind::InvalidData, "Packet length mismatch"));
         }

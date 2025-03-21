@@ -89,7 +89,7 @@ impl UDPSocket {
     pub fn send(&self, payload: Vec<u8>, addr: &SocketAddrV4) -> Result<usize> {
         let packet = UDPPacket::new(&self.addr, addr, payload)?;
 
-        println!("Sending packet {:?}", packet);
+        log::trace!("Sending packet\n\n{:?}\n", packet);
 
         self.send_packet(&packet, addr)
     }
@@ -120,8 +120,10 @@ impl UDPSocket {
         let addr = SocketAddrV4::new(ip, port);
 
         // skip forward 20 bytes to skip the IP header
-        println!("Received packet {:?}", &buffer[20..bytes_received as usize]);
-        println!("From {:?}", std::net::SocketAddr::V4(addr));
+        log::trace!(
+            "Received packet\n\n{:?}\n",
+            &buffer[20..bytes_received as usize]
+        );
         let packet = UDPPacket::from_bytes(&buffer[20..bytes_received as usize])?;
 
         Ok((packet, std::net::SocketAddr::V4(addr)))

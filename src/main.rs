@@ -1,6 +1,7 @@
 use std::io::Result;
 
 use clap::Parser;
+use colored::Colorize;
 
 mod cli;
 mod common;
@@ -10,68 +11,49 @@ mod utils;
 // Example usage
 pub fn main() -> Result<()> {
     let args = cli::Args::parse();
+    utils::log::Logger::init(&args);
 
     match args.command {
         cli::Subcommands::Listener(listener_args) => {
             let socket = proto::socket::UDPSocket::new(listener_args.addr)?;
-            println!(
-                "Created destination UDP socket for IPv4. Bound to {}",
-                listener_args.addr
+            log::info!(
+                "UDP socket created successfully! Listening in on {}",
+                listener_args.addr.to_string().green().bold()
             );
 
             loop {
-                // Receive a response
                 let (response, from_addr) = socket.receive_packet(1024)?;
-                println!(
-                    "Received packet from {:?}: {:?}",
-                    from_addr,
+                log::info!(
+                    "Received packet from {}:\n\n{}\n",
+                    from_addr.to_string().blue(),
                     response.to_string()
                 );
             }
         }
         cli::Subcommands::Sender(sender_args) => {
-            let src_addr = utils::macros::ipv4!()?;
-            let src_socket = proto::socket::UDPSocket::new(src_addr)?;
-            println!("Created source UDP socket for IPv4. Bound to {}", src_addr);
+            let src_socket = proto::socket::UDPSocket::new(sender_args.bind)?;
+            log::info!(
+                "UDP socket created successfully! Bount to {}",
+                sender_args.bind.to_string().green().bold()
+            );
 
-            // Create a UDP packet
-            let payload = b"Hello, UDP!".to_vec();
-            src_socket.send(payload, &sender_args.addr)?;
-
-            println!("Packet sent! Waiting for response...");
+            for line_result in std::io::stdin().lines() {
+                match line_result {
+                    Ok(mut line) => {
+                        line.push('\n');
+                        let payload = line.as_bytes().to_vec();
+                        let (_, elapsed) = utils::macros::timeit!({
+                            src_socket.send(payload, &sender_args.addr)?
+                        });
+                        log::info!("Packet sent! Took {}", format!("{:?}", elapsed).blue());
+                    }
+                    Err(e) => {
+                        log::error!("Error reading line:\n\n{}\n", e);
+                    }
+                }
+            }
         }
     }
 
     Ok(())
 }
-
-// pub fn main() -> Result<()> {
-//     // using rust's std::net::UdpSocket
-//     let src_addr = utils::macros::ipv4!("127.0.0.1:8080")?;
-//     let src_socket = std::net::UdpSocket::bind(src_addr)?;
-//     println!("Created source UDP socket for IPv4. Bound to {}", src_addr);
-
-//     let dst_addr = utils::macros::ipv4!("127.0.0.1:9090")?;
-//     let dst_socket = std::net::UdpSocket::bind(dst_addr)?;
-//     println!(
-//         "Created destination UDP socket for IPv4. Bound to {}",
-//         dst_addr
-//     );
-
-//     // Create a UDP packet
-//     let payload = b"Hello, UDP!".to_vec();
-//     src_socket.send_to(&payload, &dst_addr)?;
-
-//     println!("Packet sent! Waiting for response...");
-
-//     // Receive a response
-//     let mut buf = [0; 1024];
-//     let (n, from_addr) = dst_socket.recv_from(&mut buf)?;
-//     println!(
-//         "Received response from {:?}: {:?}",
-//         from_addr,
-//         String::from_utf8_lossy(&buf[..n])
-//     );
-
-//     Ok(())
-// }
