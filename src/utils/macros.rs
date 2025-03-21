@@ -1,4 +1,10 @@
 macro_rules! ipv4 {
+    () => {{
+        Ok::<_, std::io::Error>(std::net::SocketAddrV4::new(
+            std::net::Ipv4Addr::UNSPECIFIED,
+            0,
+        ))
+    }};
     ($ip:expr, $port:expr) => {{
         use std::str::FromStr;
         Ok::<_, std::io::Error>(std::net::SocketAddrV4::new(

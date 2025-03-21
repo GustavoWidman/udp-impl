@@ -4,10 +4,7 @@ use std::{
     net::{Ipv4Addr, SocketAddr, SocketAddrV4},
 };
 
-use libc::{
-    AF_INET, IP_HDRINCL, IPPROTO_IP, IPPROTO_UDP, SOCK_RAW, bind, c_int, c_void, recvfrom, sendto,
-    socket, socklen_t,
-};
+use libc::{AF_INET, IPPROTO_UDP, SOCK_RAW, bind, c_int, recvfrom, sendto, socket};
 
 use crate::common::traits::{FromBytes, ToBytes};
 
@@ -39,18 +36,6 @@ impl UDPSocket {
         unsafe {
             sock = socket(AF_INET, SOCK_RAW, IPPROTO_UDP);
             if sock < 0 {
-                return Err(Error::last_os_error());
-            }
-
-            let val: c_int = 1;
-            let res = libc::setsockopt(
-                sock,
-                IPPROTO_IP,
-                IP_HDRINCL,
-                &val as *const c_int as *const c_void,
-                mem::size_of::<c_int>() as socklen_t,
-            );
-            if res < 0 {
                 return Err(Error::last_os_error());
             }
 
@@ -134,9 +119,10 @@ impl UDPSocket {
         let port = u16::from_be(sock_addr.sin_port);
         let addr = SocketAddrV4::new(ip, port);
 
-        println!("Received packet {:?}", &buffer[..bytes_received as usize]);
+        // skip forward 20 bytes to skip the IP header
+        println!("Received packet {:?}", &buffer[20..bytes_received as usize]);
         println!("From {:?}", std::net::SocketAddr::V4(addr));
-        let packet = UDPPacket::from_bytes(&buffer[..bytes_received as usize])?;
+        let packet = UDPPacket::from_bytes(&buffer[20..bytes_received as usize])?;
 
         Ok((packet, std::net::SocketAddr::V4(addr)))
     }

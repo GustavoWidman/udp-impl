@@ -6,7 +6,7 @@ use std::{
     path::PathBuf,
 };
 
-use clap::Parser;
+use clap::{Parser, Subcommand};
 use log::LevelFilter;
 
 #[derive(Parser, Debug)]
@@ -18,14 +18,28 @@ pub struct Args {
     // /// Allows the user to specify the mode of operation
     // #[arg(long, short, default_value_t = Mode::Client)]
     // pub mode: Mode,
-    /// Set the IP address to bind to (or connect to)
-    #[arg(long, short)]
-    pub bind_addr: SocketAddrV4,
-
-    /// Set the port to bind to (or connect to)
-    #[arg(long, short)]
-    pub dest_addr: SocketAddrV4,
+    #[command(subcommand)]
+    pub command: Subcommands,
     // /// Set the file to read (or write) from (or to)
     // #[arg(long, short)]
     // pub file: Option<PathBuf>,
+}
+
+#[derive(Subcommand, Debug)]
+pub enum Subcommands {
+    Listener(ListenerArgs),
+    Sender(SenderArgs),
+}
+#[derive(Parser, Debug)]
+pub struct SenderArgs {
+    /// Set the port to send data to
+    #[arg(long, short)]
+    pub addr: SocketAddrV4,
+}
+
+#[derive(Parser, Debug)]
+pub struct ListenerArgs {
+    /// Set the IP address to listen on
+    #[arg(long, short)]
+    pub addr: SocketAddrV4,
 }

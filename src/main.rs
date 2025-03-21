@@ -1,5 +1,7 @@
 use std::io::Result;
 
+use clap::Parser;
+
 mod cli;
 mod common;
 mod proto;
@@ -7,31 +9,38 @@ mod utils;
 
 // Example usage
 pub fn main() -> Result<()> {
-    // Create a UDP socket for IPv4
-    let src_addr = utils::macros::ipv4!("127.0.0.1:8080")?;
-    let src_socket = proto::socket::UDPSocket::new(src_addr)?;
-    println!("Created source UDP socket for IPv4. Bound to {}", src_addr);
+    let args = cli::Args::parse();
 
-    let dst_addr = utils::macros::ipv4!("127.0.0.1:9090")?;
-    let dst_socket = proto::socket::UDPSocket::new(dst_addr)?;
-    println!(
-        "Created destination UDP socket for IPv4. Bound to {}",
-        dst_addr
-    );
+    match args.command {
+        cli::Subcommands::Listener(listener_args) => {
+            let socket = proto::socket::UDPSocket::new(listener_args.addr)?;
+            println!(
+                "Created destination UDP socket for IPv4. Bound to {}",
+                listener_args.addr
+            );
 
-    // Create a UDP packet
-    let payload = b"Hello, UDP!".to_vec();
-    src_socket.send(payload, &dst_addr)?;
+            loop {
+                // Receive a response
+                let (response, from_addr) = socket.receive_packet(1024)?;
+                println!(
+                    "Received packet from {:?}: {:?}",
+                    from_addr,
+                    response.to_string()
+                );
+            }
+        }
+        cli::Subcommands::Sender(sender_args) => {
+            let src_addr = utils::macros::ipv4!()?;
+            let src_socket = proto::socket::UDPSocket::new(src_addr)?;
+            println!("Created source UDP socket for IPv4. Bound to {}", src_addr);
 
-    println!("Packet sent! Waiting for response...");
+            // Create a UDP packet
+            let payload = b"Hello, UDP!".to_vec();
+            src_socket.send(payload, &sender_args.addr)?;
 
-    // Receive a response
-    let (response, from_addr) = dst_socket.receive_packet(1024)?;
-    println!(
-        "Received response from {:?}: {:?}",
-        from_addr,
-        response.to_string()
-    );
+            println!("Packet sent! Waiting for response...");
+        }
+    }
 
     Ok(())
 }
