@@ -23,24 +23,24 @@ pub fn main() -> Result<()> {
 
             loop {
                 let (response, from_addr) = socket.receive_packet(1024)?;
-                log::info!(
-                    "Received packet from {}:\n\n{}\n",
-                    from_addr.to_string().blue(),
-                    response.to_string()
-                );
+                log::info!("Received packet from {}...", from_addr.to_string().blue(),);
+                println!("{}", response.to_string());
             }
         }
         cli::Subcommands::Sender(sender_args) => {
             let src_socket = proto::socket::UDPSocket::new(sender_args.bind)?;
             log::info!(
-                "UDP socket created successfully! Bount to {}",
+                "UDP socket created successfully! Bound to {}",
                 sender_args.bind.to_string().green().bold()
+            );
+            log::info!(
+                "STDIN will be read and sent to {}",
+                sender_args.addr.to_string().blue()
             );
 
             for line_result in std::io::stdin().lines() {
                 match line_result {
-                    Ok(mut line) => {
-                        line.push('\n');
+                    Ok(line) => {
                         let payload = line.as_bytes().to_vec();
                         let (_, elapsed) = utils::macros::timeit!({
                             src_socket.send(payload, &sender_args.addr)?
